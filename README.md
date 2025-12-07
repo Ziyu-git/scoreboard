@@ -1,6 +1,5 @@
 # 🎓 智能成绩分析看板系统
 
-<div align="center">
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -318,10 +317,9 @@ trend = (最新成绩 - 首次成绩) / 考试次数
 
 ---
 
-<div align="center">
 
 **如果这个项目对你有帮助，请给一个 ⭐️ Star 支持一下！**
 
 Made with ❤️ by [Ziyu-git]
 
-</div>
+
