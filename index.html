@@ -1,0 +1,1966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能成绩分析看板系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --gradient-start: #667eea;
+            --gradient-end: #764ba2;
+            --text-light: white;
+            --text-dark: #333;
+            --bg-light: white;
+            --bg-medium: #f8f9fa;
+            --border-color: #dee2e6;
+            --shadow-color: rgba(0,0,0,0.1);
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+        }
+
+        body.theme-dark {
+            --primary-color: #7b8cde;
+            --secondary-color: #8b6cbf;
+            --gradient-start: #2c3e50;
+            --gradient-end: #4ca1af;
+            --text-light: #f1f1f1;
+            --text-dark: #e0e0e0;
+            --bg-light: #2d3436;
+            --bg-medium: #3b4245;
+            --border-color: #555;
+            --shadow-color: rgba(0,0,0,0.4);
+        }
+
+        body.theme-blue {
+            --primary-color: #007bff;
+            --secondary-color: #4facfe;
+            --gradient-start: #4facfe;
+            --gradient-end: #00f2fe;
+            --text-light: white;
+            --text-dark: #333;
+            --bg-light: white;
+            --bg-medium: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+        
+        body.theme-orange {
+            --primary-color: #fd7e14;
+            --secondary-color: #ffc107;
+            --gradient-start: #f093fb;
+            --gradient-end: #f5576c;
+            --text-light: white;
+            --text-dark: #333;
+            --bg-light: white;
+            --bg-medium: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-box h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            background: #667eea;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        #loginError {
+            color: red;
+            margin-top: 10px;
+            height: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--bg-light);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px var(--shadow-color);
+            overflow: hidden;
+            display: none;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            color: var(--text-light);
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header-actions {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .btn-primary { background: var(--success-color); color: white; }
+        .btn-secondary { background: var(--info-color); color: white; }
+        .btn-warning { background: var(--warning-color); color: #333; }
+        .btn-danger { background: var(--danger-color); color: white; }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: var(--bg-medium);
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: var(--text-dark);
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .nav-tab:hover {
+            background: #e9ecef;
+        }
+        body.theme-dark .nav-tab:hover { background: #4a5356; }
+
+        .nav-tab.active {
+            background: var(--bg-light);
+            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.5s;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+            color: var(--text-light);
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .card {
+            background: var(--bg-light);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            transition: transform 0.3s, background 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        body.theme-dark .card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+
+        .card-title {
+            font-size: 1.2em;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--primary-color);
+            color: var(--text-light);
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover { background: var(--bg-medium); }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        .student-selector, .filter-group {
+            margin-bottom: 20px;
+        }
+
+        .student-selector select, .student-selector input, .filter-group input, .filter-group select {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: 2px solid var(--primary-color);
+            border-radius: 5px;
+            margin-right: 10px;
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: var(--bg-light);
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover { color: #000; }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+
+        .hidden { display: none !important; }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .theme-selector button {
+            width: 100px;
+            height: 40px;
+            margin: 5px;
+            border: 2px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+        .theme-selector button.active {
+            border-color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        .student-grade-view {
+            text-align: center;
+            padding: 50px;
+        }
+        .student-grade-view h2 {
+            font-size: 2em;
+            margin-bottom: 20px;
+        }
+        .grade-badge {
+            font-size: 3em;
+            padding: 20px 40px;
+            border-radius: 15px;
+            color: white;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        .grade-a { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .grade-b { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .grade-c { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .grade-d { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+
+        .preview-mode .stat-number, .preview-mode tbody, .preview-mode .chart-container canvas {
+            filter: blur(8px);
+            user-select: none;
+        }
+        .preview-mode .chart-container {
+            position: relative;
+        }
+        .preview-mode .chart-container::after {
+            content: '数据已隐藏';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 20px;
+            color: var(--text-dark);
+            font-weight: bold;
+            filter: blur(0);
+        }
+
+        .edit-btn {
+            padding: 5px 10px;
+            background: var(--info-color);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .edit-btn:hover {
+            background: #138496;
+        }
+    </style>
+</head>
+<body>
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box">
+            <h2>智能成绩分析系统</h2>
+            <input type="text" id="username" placeholder="帐号">
+            <input type="password" id="password" placeholder="密码">
+            <button onclick="handleLogin()">登录</button>
+            <p id="loginError"></p>
+        </div>
+    </div>
+
+    <div id="mainContainer" class="container">
+        <div class="header">
+            <h1>🎓 智能成绩分析看板系统</h1>
+            <p>初二年级 | 2024学年第一学期期末考试</p>
+            <div class="header-actions">
+                <span id="welcomeMsg" style="margin-right: 20px;"></span>
+                <button class="btn btn-danger" onclick="handleLogout()">登出</button>
+            </div>
+        </div>
+
+        <div id="navContainer" class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('overview')">总览</button>
+            <button class="nav-tab" onclick="switchTab('rankings')">排名榜</button>
+            <button class="nav-tab" onclick="switchTab('analysis')">数据分析</button>
+            <button class="nav-tab" onclick="switchTab('students')">学生详情</button>
+            <button class="nav-tab" onclick="switchTab('subject')">学科分析</button>
+            <button class="nav-tab" onclick="switchTab('warning')">预警系统</button>
+            <button class="nav-tab" onclick="switchTab('history')">历史对比</button>
+            <button class="nav-tab" onclick="switchTab('classCompare')">班级对比</button>
+            <button class="nav-tab" onclick="switchTab('prediction')">成绩预测</button>
+            <button class="nav-tab" onclick="switchTab('settings')">设置</button>
+            <button id="myGradesTab" class="nav-tab hidden" onclick="switchTab('myGrades')">我的成绩</button>
+        </div>
+
+        <div id="overview" class="tab-content active">
+            <div class="student-selector">
+                <label>选择班级：</label>
+                <select id="classSelect" onchange="changeClass()">
+                    <option value="1班">1班</option>
+                    <option value="2班">2班</option>
+                    <option value="3班" selected>3班</option>
+                    <option value="4班">4班</option>
+                    <option value="5班">5班</option>
+                    <option value="6班">6班</option>
+                </select>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">班级平均分</div>
+                    <div class="stat-number" id="classAverage">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">最高分</div>
+                    <div class="stat-number" id="classHighest">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">最低分</div>
+                    <div class="stat-number" id="classLowest">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">及格率</div>
+                    <div class="stat-number" id="passRate">0%</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📊 总分分布</h3>
+                <div class="chart-container">
+                    <canvas id="distributionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">🏆 优秀学生 TOP 5</h3>
+                <table id="topStudentsTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>姓名</th>
+                            <th>总分</th>
+                            <th>语文</th>
+                            <th>数学</th>
+                            <th>英语</th>
+                            <th>物理</th>
+                            <th>化学</th>
+                            <th>生物</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topStudentsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="rankings" class="tab-content">
+            <div class="filter-group">
+                <label>搜索学生：</label>
+                <input type="text" id="searchInput" placeholder="输入姓名或学号" oninput="filterStudents()">
+                <label>成绩范围：</label>
+                <input type="number" id="minScore" placeholder="最低分" oninput="filterStudents()">
+                <input type="number" id="maxScore" placeholder="最高分" oninput="filterStudents()">
+                <label>排序方式：</label>
+                <select id="sortBy" onchange="filterStudents()">
+                    <option value="totalScore">总分</option>
+                    <option value="chinese">语文</option>
+                    <option value="math">数学</option>
+                    <option value="english">英语</option>
+                    <option value="physics">物理</option>
+                    <option value="chemistry">化学</option>
+                    <option value="biology">生物</option>
+                </select>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📋 完整排名榜</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>操作</th>
+                            <th>排名</th>
+                            <th>学号</th>
+                            <th>姓名</th>
+                            <th>总分</th>
+                            <th>语文</th>
+                            <th>数学</th>
+                            <th>英语</th>
+                            <th>物理</th>
+                            <th>化学</th>
+                            <th>生物</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="analysis" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">📈 各科平均分对比</h3>
+                <div class="chart-container">
+                    <canvas id="subjectAverageChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">🎯 成绩分布对比</h3>
+                <div class="chart-container">
+                    <canvas id="scoreDistributionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📊 各分数段人数统计</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>分数段</th>
+                            <th>人数</th>
+                            <th>百分比</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scoreRangeBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="students" class="tab-content">
+            <div class="student-selector">
+                <label>选择学生：</label>
+                <select id="studentSelect" onchange="showStudentDetail()">
+                    <option value="">请选择学生</option>
+                </select>
+            </div>
+
+            <div id="studentDetailContainer"></div>
+        </div>
+
+        <div id="subject" class="tab-content">
+            <div class="student-selector">
+                <label>选择科目：</label>
+                <select id="subjectSelect" onchange="showSubjectAnalysis()">
+                    <option value="chinese">语文</option>
+                    <option value="math">数学</option>
+                    <option value="english">英语</option>
+                    <option value="physics">物理</option>
+                    <option value="chemistry">化学</option>
+                    <option value="biology">生物</option>
+                </select>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">科目平均分</div>
+                    <div class="stat-number" id="subjectAvg">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">最高分</div>
+                    <div class="stat-number" id="subjectMax">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">最低分</div>
+                    <div class="stat-number" id="subjectMin">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">及格率</div>
+                    <div class="stat-number" id="subjectPass">0%</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📊 科目成绩分布</h3>
+                <div class="chart-container">
+                    <canvas id="subjectDistChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">🏆 科目TOP 10</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>姓名</th>
+                            <th>分数</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subjectTopBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="warning" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">⚠️ 学业预警</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>总分</th>
+                            <th>预警原因</th>
+                            <th>建议措施</th>
+                        </tr>
+                    </thead>
+                    <tbody id="warningBody"></tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📉 单科不及格学生</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>不及格科目</th>
+                            <th>分数</th>
+                        </tr>
+                    </thead>
+                    <tbody id="failedSubjectsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="history" class="tab-content">
+            <div class="student-selector">
+                <label>选择学生：</label>
+                <select id="historyStudentSelect" onchange="showHistoryTrend()">
+                    <option value="">请选择学生</option>
+                </select>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📈 成绩趋势</h3>
+                <div class="chart-container">
+                    <canvas id="historyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📊 历史成绩详情</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>考试</th>
+                            <th>总分</th>
+                            <th>语文</th>
+                            <th>数学</th>
+                            <th>英语</th>
+                            <th>物理</th>
+                            <th>化学</th>
+                            <th>生物</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyDetailBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="classCompare" class="tab-content">
+            <div class="card">
+                <h3 class="card-title">📊 各班平均分对比</h3>
+                <div class="chart-container">
+                    <canvas id="classCompareChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📈 各班及格率对比</h3>
+                <div class="chart-container">
+                    <canvas id="classPassRateChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">🏆 各班排名统计</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>班级</th>
+                            <th>平均分</th>
+                            <th>最高分</th>
+                            <th>最低分</th>
+                            <th>及格率</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classStatsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="prediction" class="tab-content">
+            <div class="student-selector">
+                <label>选择学生：</label>
+                <select id="predictionStudentSelect" onchange="showPrediction()">
+                    <option value="">请选择学生</option>
+                </select>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">预测下次总分</div>
+                    <div class="stat-number" id="predictedScore">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">预测趋势</div>
+                    <div class="stat-number" id="predictedTrend">-</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📈 成绩预测曲线</h3>
+                <div class="chart-container">
+                    <canvas id="predictionChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">💡 学习建议</h3>
+                <div id="studySuggestions"></div>
+            </div>
+        </div>
+        
+        <div id="myGrades" class="tab-content">
+            <div id="studentGradeView" class="student-grade-view"></div>
+        </div>
+
+        <div id="settings" class="tab-content">
+            <div class="settings-grid">
+                <div class="card">
+                    <h3 class="card-title">⚙️ 系统操作</h3>
+                    <div id="adminActions">
+                        <button class="btn btn-primary" onclick="exportToExcel()">📊 导出Excel</button>
+                        <button class="btn btn-secondary" onclick="alert('请在排名榜页面对单个学生进行编辑')">✏️ 编辑数据提示</button>
+                        <button class="btn btn-warning" onclick="generateNewData()">🔄 刷新数据</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="card-title">🎨 主题选择</h3>
+                    <div class="theme-selector">
+                        <button id="theme-default" onclick="setTheme('')">默认主题</button>
+                        <button id="theme-blue" onclick="setTheme('theme-blue')">科技蓝</button>
+                        <button id="theme-orange" onclick="setTheme('theme-orange')">活力橙</button>
+                        <button id="theme-dark" onclick="setTheme('theme-dark')">暗黑模式</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>编辑学生成绩</h2>
+            <form id="editForm">
+                <input type="hidden" id="editStudentId">
+                <div class="form-group">
+                    <label>姓名：</label>
+                    <input type="text" id="editName" readonly>
+                </div>
+                <div class="form-group">
+                    <label>语文：</label>
+                    <input type="number" id="editChinese" min="0" max="150" required>
+                </div>
+                <div class="form-group">
+                    <label>数学：</label>
+                    <input type="number" id="editMath" min="0" max="150" required>
+                </div>
+                <div class="form-group">
+                    <label>英语：</label>
+                    <input type="number" id="editEnglish" min="0" max="150" required>
+                </div>
+                <div class="form-group">
+                    <label>物理：</label>
+                    <input type="number" id="editPhysics" min="0" max="100" required>
+                </div>
+                <div class="form-group">
+                    <label>化学：</label>
+                    <input type="number" id="editChemistry" min="0" max="100" required>
+                </div>
+                <div class="form-group">
+                    <label>生物：</label>
+                    <input type="number" id="editBiology" min="0" max="100" required>
+                </div>
+                <button type="submit" class="btn btn-primary">保存修改</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    const pinyinMap = {
+        'zhangwei': '张伟', 'lina': '李娜', 'wangfang': '王芳', 'liuyang': '刘洋', 
+        'chenjing': '陈静', 'yangfan': '杨帆', 'zhaomin': '赵敏', 'suntao': '孙涛', 
+        'zhoujie': '周杰', 'wudi': '吴迪', 'zhengqiang': '郑强', 'wanglei': '王磊', 
+        'fengting': '冯婷', 'chenhao': '陈浩', 'chuyun': '楚云', 'hanmei': '韩梅', 
+        'caoxue': '曹雪', 'xieting': '谢霆', 'yuanming': '袁明', 'dengchao': '邓超', 
+        'pengli': '彭丽', 'suwen': '苏文', 'dingyi': '丁一', 'fanbing': '范冰', 
+        'tansong': '谭松', 'liming': '黎明', 'jiangxin': '蒋欣', 'shenteng': '沈腾', 
+        'jialing': '贾玲', 'songjia': '宋佳', 'linxin': '林心', 'luolan': '罗兰', 
+        'fangyuan': '方圆', 'jianghe': '江河', 'wangyang': '汪洋', 'tianye': '田野', 
+        'shilei': '石磊', 'jinxin': '金鑫', 'baixue': '白雪', 'liuqing': '柳青', 
+        'meilan': '梅兰', 'zhufeng': '竹风', 'juxiang': '菊香', 'lanfang': '兰芳', 
+        'songbai': '松柏', 'baiqing': '柏青', 'fengye': '枫叶', 'yuchen': '雨晨', 
+        'shuangjiang': '霜降', 'xuemei': '雪梅'
+    };
+
+    const userRoles = {
+        'admin@gmail.com': { password: 'admin123456', role: 'admin' },
+        'teacher@cold.edu': { password: 'teacher123', role: 'teacher' },
+        '1': { password: '1', role: 'preview' },
+        'test': { password: 'test123', role: 'test' }
+    };
+
+    let currentUser = null;
+
+    function handleLogin() {
+        const username = document.getElementById('username').value.toLowerCase();
+        const password = document.getElementById('password').value;
+        const errorP = document.getElementById('loginError');
+        errorP.textContent = '';
+
+        let user = null;
+
+        if (userRoles[username] && userRoles[username].password === password) {
+            user = { role: userRoles[username].role, name: username };
+        } else if (pinyinMap[username] && password === '123456') {
+            user = { role: 'student', name: pinyinMap[username], username: username };
+        }
+
+        if (user) {
+            currentUser = user;
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            initializeDashboard();
+        } else {
+            errorP.textContent = '帐号或密码错误！';
+        }
+    }
+
+    function handleLogout() {
+        sessionStorage.removeItem('currentUser');
+        location.reload();
+    }
+
+    function initializeDashboard() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainContainer').style.display = 'block';
+        
+        if (currentUser.role === 'test') {
+            sandboxData = JSON.parse(JSON.stringify(classesData));
+        }
+
+        applyPermissions();
+        init();
+    }
+
+    function applyPermissions() {
+        const welcomeMsg = document.getElementById('welcomeMsg');
+        welcomeMsg.textContent = `欢迎您, ${currentUser.name}!`;
+
+        const mainContainer = document.getElementById('mainContainer');
+        mainContainer.classList.remove('preview-mode');
+
+        document.querySelectorAll('.nav-tab, .tab-content').forEach(el => el.classList.remove('hidden'));
+        document.getElementById('myGradesTab').classList.add('hidden');
+        document.getElementById('myGrades').classList.add('hidden');
+
+        switch (currentUser.role) {
+            case 'admin':
+                break;
+            case 'teacher':
+                document.querySelectorAll('.nav-tab').forEach(tab => {
+                    if(tab.getAttribute('onclick') === "switchTab('settings')") {
+                        tab.classList.add('hidden');
+                    }
+                });
+                document.getElementById('settings').classList.add('hidden');
+                break;
+            case 'student':
+                document.querySelectorAll('.nav-tab').forEach(tab => {
+                    if(tab.id !== 'myGradesTab') {
+                        tab.classList.add('hidden');
+                    }
+                });
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    if(content.id !== 'myGrades') {
+                        content.classList.add('hidden');
+                    }
+                });
+                document.getElementById('myGradesTab').classList.remove('hidden');
+                document.getElementById('myGrades').classList.remove('hidden');
+                switchTab('myGrades');
+                break;
+            case 'preview':
+                mainContainer.classList.add('preview-mode');
+                document.querySelectorAll('.edit-btn').forEach(btn => btn.style.display = 'none');
+                document.getElementById('adminActions').style.display = 'none';
+                break;
+            case 'test':
+                break;
+        }
+    }
+    
+    function setTheme(themeName) {
+        document.body.className = themeName;
+        localStorage.setItem('dashboardTheme', themeName);
+        Object.values(charts).forEach(chart => {
+            if (chart) chart.destroy();
+        });
+        charts = {};
+        renderCurrentTab();
+        
+        document.querySelectorAll('.theme-selector button').forEach(btn => btn.classList.remove('active'));
+        if (themeName === '') {
+            document.getElementById('theme-default').classList.add('active');
+        } else {
+            const themeKey = themeName.split('-')[1];
+            const btn = document.getElementById(`theme-${themeKey}`);
+            if(btn) btn.classList.add('active');
+        }
+    }
+
+    function renderMyGrades() {
+        const dataSource = currentUser.role === 'test' ? sandboxData : classesData;
+        let student = null;
+        
+        for(let className in dataSource) {
+            const found = dataSource[className].find(s => s.name === currentUser.name);
+            if(found) {
+                student = found;
+                break;
+            }
+        }
+        
+        const container = document.getElementById('studentGradeView');
+        if (!student) {
+            container.innerHTML = '<h2>未找到您的成绩信息</h2>';
+            return;
+        }
+
+        const score = student.totalScore;
+        const percentage = score / TOTAL_SCORE;
+        let grade, gradeClass, message;
+
+        if (percentage >= 0.75) {
+            grade = 'A优';
+            gradeClass = 'grade-a';
+            message = '表现卓越，请继续保持！';
+        } else if (percentage >= 0.6) {
+            grade = 'B优';
+            gradeClass = 'grade-b';
+            message = '成绩良好，仍有进步空间！';
+        } else if (percentage >= 0.5) {
+            grade = 'C';
+            gradeClass = 'grade-c';
+            message = '成绩合格，请关注薄弱科目。';
+        } else {
+            grade = 'D';
+            gradeClass = 'grade-d';
+            message = '需要加倍努力，老师会帮助你！';
+        }
+
+        container.innerHTML = `
+            <h2>${student.name}, 您的本次考试总评等级为:</h2>
+            <div class="grade-badge ${gradeClass}">${grade}</div>
+            <h3>总分: ${score} / ${TOTAL_SCORE}</h3>
+            <p style="margin-top: 20px; font-size: 1.2em;">${message}</p>
+        `;
+    }
+
+    const TOTAL_SCORE = 750;
+    const SUBJECTS = {
+        chinese: { name: '语文', maxScore: 150 },
+        math: { name: '数学', maxScore: 150 },
+        english: { name: '英语', maxScore: 150 },
+        physics: { name: '物理', maxScore: 100 },
+        chemistry: { name: '化学', maxScore: 100 },
+        biology: { name: '生物', maxScore: 100 }
+    };
+
+    let originalClassesData = {};
+    let classesData = {};
+    let sandboxData = null;
+    let currentClass = '3班';
+    let studentsData = [];
+    let charts = {};
+    let filteredData = [];
+
+    const STUDENT_NAMES = [
+        '张伟', '李娜', '王芳', '刘洋', '陈静', '杨帆', '赵敏', '孙涛', '周杰', '吴迪',
+        '郑强', '王磊', '冯婷', '陈浩', '楚云', '韩梅', '曹雪', '谢霆', '袁明', '邓超',
+        '彭丽', '苏文', '丁一', '范冰', '谭松', '黎明', '蒋欣', '沈腾', '贾玲', '宋佳',
+        '林心', '罗兰', '方圆', '江河', '汪洋', '田野', '石磊', '金鑫', '白雪', '柳青',
+        '梅兰', '竹风', '菊香', '兰芳', '松柏', '柏青', '枫叶', '雨晨', '霜降', '雪梅'
+    ];
+
+    function generateStudentData(className) {
+        const students = [];
+        const classNum = parseInt(className);
+        const baseScore = 400 + classNum * 10;
+        
+        for (let i = 0; i < 50; i++) {
+            const chinese = Math.floor(Math.random() * 60) + 90 + (classNum * 2);
+            const math = Math.floor(Math.random() * 60) + 85 + (classNum * 3);
+            const english = Math.floor(Math.random() * 60) + 80 + (classNum * 2);
+            const physics = Math.floor(Math.random() * 40) + 55 + (classNum * 2);
+            const chemistry = Math.floor(Math.random() * 40) + 50 + (classNum * 2);
+            const biology = Math.floor(Math.random() * 40) + 50 + (classNum * 2);
+            
+            const totalScore = chinese + math + english + physics + chemistry + biology;
+            
+            students.push({
+                id: `${className}-${i + 1}`,
+                studentId: `2024${classNum}${String(i + 1).padStart(2, '0')}`,
+                name: STUDENT_NAMES[i],
+                class: className,
+                chinese,
+                math,
+                english,
+                physics,
+                chemistry,
+                biology,
+                totalScore
+            });
+        }
+        
+        return students.sort((a, b) => b.totalScore - a.totalScore);
+    }
+
+    function generateHistoryData() {
+        const exams = ['期中考试', '月考一', '月考二', '期末考试'];
+        const history = {};
+        
+        studentsData.forEach(student => {
+            history[student.id] = exams.map((exam, index) => {
+                const variance = (Math.random() - 0.5) * 50;
+                const trend = index * 5;
+                
+                return {
+                    exam,
+                    chinese: Math.max(60, Math.min(150, student.chinese + variance + trend)),
+                    math: Math.max(60, Math.min(150, student.math + variance + trend)),
+                    english: Math.max(60, Math.min(150, student.english + variance + trend)),
+                    physics: Math.max(40, Math.min(100, student.physics + variance/2 + trend)),
+                    chemistry: Math.max(40, Math.min(100, student.chemistry + variance/2 + trend)),
+                    biology: Math.max(40, Math.min(100, student.biology + variance/2 + trend))
+                };
+            });
+            
+            history[student.id].forEach(record => {
+                record.totalScore = record.chinese + record.math + record.english + 
+                                  record.physics + record.chemistry + record.biology;
+            });
+        });
+        
+        return history;
+    }
+
+    function init() {
+        if (currentUser.role === 'preview') {
+            document.getElementById('classAverage').textContent = '***';
+            document.getElementById('classHighest').textContent = '***';
+            return;
+        }
+
+        const sourceData = currentUser.role === 'test' ? sandboxData : classesData;
+        studentsData = sourceData[currentClass];
+        filteredData = [...studentsData];
+        
+        renderCurrentTab();
+    }
+
+    function changeClass() {
+        currentClass = document.getElementById('classSelect').value;
+        const sourceData = currentUser.role === 'test' ? sandboxData : classesData;
+        studentsData = sourceData[currentClass];
+        filteredData = [...studentsData];
+        renderCurrentTab();
+    }
+
+    function renderCurrentTab() {
+        const activeTab = document.querySelector('.tab-content.active');
+        if (!activeTab) return;
+        
+        const tabId = activeTab.id;
+        
+        if (tabId === 'overview') renderOverview();
+        else if (tabId === 'rankings') renderRankings();
+        else if (tabId === 'analysis') renderAnalysis();
+        else if (tabId === 'students') renderStudentSelector();
+        else if (tabId === 'subject') renderSubjectAnalysis();
+        else if (tabId === 'warning') renderWarnings();
+        else if (tabId === 'history') renderHistorySelector();
+        else if (tabId === 'classCompare') renderClassComparison();
+        else if (tabId === 'prediction') renderPredictionSelector();
+        else if (tabId === 'myGrades') renderMyGrades();
+    }
+
+    function renderOverview() {
+        const avg = (studentsData.reduce((sum, s) => sum + s.totalScore, 0) / studentsData.length).toFixed(1);
+        const highest = Math.max(...studentsData.map(s => s.totalScore));
+        const lowest = Math.min(...studentsData.map(s => s.totalScore));
+        const passed = studentsData.filter(s => s.totalScore >= 450).length;
+        const passRate = ((passed / studentsData.length) * 100).toFixed(1);
+
+        document.getElementById('classAverage').textContent = avg;
+        document.getElementById('classHighest').textContent = highest;
+        document.getElementById('classLowest').textContent = lowest;
+        document.getElementById('passRate').textContent = passRate + '%';
+
+        const scoreRanges = [
+            { label: '700-750', min: 700, max: 750 },
+            { label: '650-699', min: 650, max: 699 },
+            { label: '600-649', min: 600, max: 649 },
+            { label: '550-599', min: 550, max: 599 },
+            { label: '500-549', min: 500, max: 549 },
+            { label: '450-499', min: 450, max: 499 },
+            { label: '400-449', min: 400, max: 449 },
+            { label: '400以下', min: 0, max: 399 }
+        ];
+
+        const distribution = scoreRanges.map(range => 
+            studentsData.filter(s => s.totalScore >= range.min && s.totalScore <= range.max).length
+        );
+
+        if (charts.distribution) charts.distribution.destroy();
+        const ctx = document.getElementById('distributionChart').getContext('2d');
+        charts.distribution = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: scoreRanges.map(r => r.label),
+                datasets: [{
+                    label: '人数',
+                    data: distribution,
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        const topStudents = studentsData.slice(0, 5);
+        const tbody = document.getElementById('topStudentsBody');
+        tbody.innerHTML = '';
+        topStudents.forEach((student, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${student.name}</td>
+                <td><strong>${student.totalScore}</strong></td>
+                <td>${student.chinese}</td>
+                <td>${student.math}</td>
+                <td>${student.english}</td>
+                <td>${student.physics}</td>
+                <td>${student.chemistry}</td>
+                <td>${student.biology}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderRankings() {
+        const tbody = document.getElementById('rankingsBody');
+        tbody.innerHTML = '';
+        
+        const dataToShow = filteredData.length > 0 ? filteredData : studentsData;
+        
+        dataToShow.forEach((student, index) => {
+            const tr = document.createElement('tr');
+            const canEdit = currentUser.role === 'admin' || currentUser.role === 'test';
+            const editButton = canEdit ? 
+                `<td><button class="edit-btn" onclick="editStudent('${student.id}')">编辑</button></td>` : 
+                '<td>-</td>';
+            
+            tr.innerHTML = `
+                ${editButton}
+                <td>${index + 1}</td>
+                <td>${student.studentId}</td>
+                <td>${student.name}</td>
+                <td><strong>${student.totalScore}</strong></td>
+                <td>${student.chinese}</td>
+                <td>${student.math}</td>
+                <td>${student.english}</td>
+                <td>${student.physics}</td>
+                <td>${student.chemistry}</td>
+                <td>${student.biology}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function filterStudents() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const minScore = parseFloat(document.getElementById('minScore').value) || 0;
+        const maxScore = parseFloat(document.getElementById('maxScore').value) || 1000;
+        const sortBy = document.getElementById('sortBy').value;
+
+        filteredData = studentsData.filter(student => {
+            const nameMatch = student.name.toLowerCase().includes(searchText) || 
+                            student.studentId.includes(searchText);
+            const scoreMatch = student.totalScore >= minScore && student.totalScore <= maxScore;
+            return nameMatch && scoreMatch;
+        });
+
+        filteredData.sort((a, b) => b[sortBy] - a[sortBy]);
+        renderRankings();
+    }
+
+    function renderAnalysis() {
+        const subjectNames = Object.keys(SUBJECTS).map(key => SUBJECTS[key].name);
+        const averages = Object.keys(SUBJECTS).map(subject => {
+            const sum = studentsData.reduce((total, student) => total + student[subject], 0);
+            return (sum / studentsData.length).toFixed(1);
+        });
+
+        if (charts.subjectAverage) charts.subjectAverage.destroy();
+        const ctx1 = document.getElementById('subjectAverageChart').getContext('2d');
+        charts.subjectAverage = new Chart(ctx1, {
+            type: 'radar',
+            data: {
+                labels: subjectNames,
+                datasets: [{
+                    label: '各科平均分',
+                    data: averages,
+                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const scoreRanges = ['90-100', '80-89', '70-79', '60-69', '60以下'];
+        const datasets = Object.keys(SUBJECTS).map((subject, idx) => {
+            const maxScore = SUBJECTS[subject].maxScore;
+            const ranges = [
+                studentsData.filter(s => s[subject] >= maxScore * 0.9).length,
+                studentsData.filter(s => s[subject] >= maxScore * 0.8 && s[subject] < maxScore * 0.9).length,
+                studentsData.filter(s => s[subject] >= maxScore * 0.7 && s[subject] < maxScore * 0.8).length,
+                studentsData.filter(s => s[subject] >= maxScore * 0.6 && s[subject] < maxScore * 0.7).length,
+                studentsData.filter(s => s[subject] < maxScore * 0.6).length
+            ];
+            
+            const colors = [
+                'rgba(255, 99, 132, 0.6)',
+                'rgba(54, 162, 235, 0.6)',
+                'rgba(255, 206, 86, 0.6)',
+                'rgba(75, 192, 192, 0.6)',
+                'rgba(153, 102, 255, 0.6)',
+                'rgba(255, 159, 64, 0.6)'
+            ];
+            
+            return {
+                label: SUBJECTS[subject].name,
+                data: ranges,
+                backgroundColor: colors[idx]
+            };
+        });
+
+        if (charts.scoreDistribution) charts.scoreDistribution.destroy();
+        const ctx2 = document.getElementById('scoreDistributionChart').getContext('2d');
+        charts.scoreDistribution = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: scoreRanges,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const totalScoreRanges = [
+            { label: '700-750', min: 700, max: 750 },
+            { label: '650-699', min: 650, max: 699 },
+            { label: '600-649', min: 600, max: 649 },
+            { label: '550-599', min: 550, max: 599 },
+            { label: '500-549', min: 500, max: 549 },
+            { label: '450-499', min: 450, max: 499 },
+            { label: '400以下', min: 0, max: 399 }
+        ];
+
+        const tbody = document.getElementById('scoreRangeBody');
+        tbody.innerHTML = '';
+        totalScoreRanges.forEach(range => {
+            const count = studentsData.filter(s => s.totalScore >= range.min && s.totalScore <= range.max).length;
+            const percentage = ((count / studentsData.length) * 100).toFixed(1);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${range.label}</td>
+                <td>${count}</td>
+                <td>${percentage}%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderStudentSelector() {
+        const select = document.getElementById('studentSelect');
+        select.innerHTML = '<option value="">请选择学生</option>';
+        studentsData.forEach(student => {
+            const option = document.createElement('option');
+            option.value = student.id;
+            option.textContent = `${student.name} (${student.studentId})`;
+            select.appendChild(option);
+        });
+    }
+
+    function showStudentDetail() {
+        const studentId = document.getElementById('studentSelect').value;
+        const container = document.getElementById('studentDetailContainer');
+        
+        if (!studentId) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const student = studentsData.find(s => s.id === studentId);
+        const history = generateHistoryData()[studentId];
+        
+        const rank = studentsData.findIndex(s => s.id === studentId) + 1;
+        const percentile = ((1 - rank / studentsData.length) * 100).toFixed(1);
+
+        container.innerHTML = `
+            <div class="card">
+                <h3 class="card-title">👤 ${student.name} - 详细信息</h3>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-label">总分</div>
+                        <div class="stat-number">${student.totalScore}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">班级排名</div>
+                        <div class="stat-number">${rank}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">击败</div>
+                        <div class="stat-number">${percentile}%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📊 各科成绩</h3>
+                <canvas id="studentSubjectChart"></canvas>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">📈 历史成绩趋势</h3>
+                <canvas id="studentHistoryChart"></canvas>
+            </div>
+        `;
+
+        const ctx1 = document.getElementById('studentSubjectChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: Object.values(SUBJECTS).map(s => s.name),
+                datasets: [{
+                    label: '成绩',
+                    data: Object.keys(SUBJECTS).map(subject => student[subject]),
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const ctx2 = document.getElementById('studentHistoryChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: history.map(h => h.exam),
+                datasets: [{
+                    label: '总分',
+                    data: history.map(h => h.totalScore),
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function renderSubjectAnalysis() {
+        showSubjectAnalysis();
+    }
+
+    function showSubjectAnalysis() {
+        const subject = document.getElementById('subjectSelect').value;
+        const maxScore = SUBJECTS[subject].maxScore;
+        
+        const scores = studentsData.map(s => s[subject]);
+        const avg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+        const max = Math.max(...scores);
+        const min = Math.min(...scores);
+        const passed = scores.filter(s => s >= maxScore * 0.6).length;
+        const passRate = ((passed / scores.length) * 100).toFixed(1);
+
+        document.getElementById('subjectAvg').textContent = avg;
+        document.getElementById('subjectMax').textContent = max;
+        document.getElementById('subjectMin').textContent = min;
+        document.getElementById('subjectPass').textContent = passRate + '%';
+
+        const ranges = [
+            studentsData.filter(s => s[subject] >= maxScore * 0.9).length,
+            studentsData.filter(s => s[subject] >= maxScore * 0.8 && s[subject] < maxScore * 0.9).length,
+            studentsData.filter(s => s[subject] >= maxScore * 0.7 && s[subject] < maxScore * 0.8).length,
+            studentsData.filter(s => s[subject] >= maxScore * 0.6 && s[subject] < maxScore * 0.7).length,
+            studentsData.filter(s => s[subject] < maxScore * 0.6).length
+        ];
+
+        if (charts.subjectDist) charts.subjectDist.destroy();
+        const ctx = document.getElementById('subjectDistChart').getContext('2d');
+        charts.subjectDist = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['优秀(90+)', '良好(80-89)', '中等(70-79)', '及格(60-69)', '不及格(<60)'],
+                datasets: [{
+                    data: ranges,
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.6)',
+                        'rgba(54, 162, 235, 0.6)',
+                        'rgba(255, 206, 86, 0.6)',
+                        'rgba(255, 159, 64, 0.6)',
+                        'rgba(255, 99, 132, 0.6)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const topStudents = [...studentsData].sort((a, b) => b[subject] - a[subject]).slice(0, 10);
+        const tbody = document.getElementById('subjectTopBody');
+        tbody.innerHTML = '';
+        topStudents.forEach((student, index) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${student.name}</td>
+                <td>${student[subject]}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderWarnings() {
+        const warningStudents = studentsData.filter(s => s.totalScore < 450);
+        const tbody1 = document.getElementById('warningBody');
+        tbody1.innerHTML = '';
+        
+        warningStudents.forEach(student => {
+            let reason = [];
+            if (student.totalScore < 375) reason.push('总分严重偏低');
+            else if (student.totalScore < 450) reason.push('总分未达及格线');
+            
+            Object.keys(SUBJECTS).forEach(subject => {
+                const maxScore = SUBJECTS[subject].maxScore;
+                if (student[subject] < maxScore * 0.6) {
+                    reason.push(`${SUBJECTS[subject].name}不及格`);
+                }
+            });
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${student.name}</td>
+                <td>${student.totalScore}</td>
+                <td>${reason.join(', ')}</td>
+                <td>加强薄弱科目辅导，制定个性化学习计划</td>
+            `;
+            tbody1.appendChild(tr);
+        });
+
+        const tbody2 = document.getElementById('failedSubjectsBody');
+        tbody2.innerHTML = '';
+        
+        studentsData.forEach(student => {
+            const failedSubjects = [];
+            Object.keys(SUBJECTS).forEach(subject => {
+                const maxScore = SUBJECTS[subject].maxScore;
+                if (student[subject] < maxScore * 0.6) {
+                    failedSubjects.push({
+                        name: SUBJECTS[subject].name,
+                        score: student[subject]
+                    });
+                }
+            });
+
+            if (failedSubjects.length > 0) {
+                failedSubjects.forEach(failed => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${student.name}</td>
+                        <td>${failed.name}</td>
+                        <td>${failed.score}</td>
+                    `;
+                    tbody2.appendChild(tr);
+                });
+            }
+        });
+    }
+
+    function renderHistorySelector() {
+        const select = document.getElementById('historyStudentSelect');
+        select.innerHTML = '<option value="">请选择学生</option>';
+        studentsData.forEach(student => {
+            const option = document.createElement('option');
+            option.value = student.id;
+            option.textContent = student.name;
+            select.appendChild(option);
+        });
+    }
+
+    function showHistoryTrend() {
+        const studentId = document.getElementById('historyStudentSelect').value;
+        if (!studentId) return;
+
+        const history = generateHistoryData()[studentId];
+        
+        if (charts.history) charts.history.destroy();
+        const ctx = document.getElementById('historyChart').getContext('2d');
+        
+        const datasets = Object.keys(SUBJECTS).map((subject, idx) => {
+            const colors = [
+                'rgba(255, 99, 132, 1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)'
+            ];
+            
+            return {
+                label: SUBJECTS[subject].name,
+                data: history.map(h => h[subject]),
+                borderColor: colors[idx],
+                tension: 0.1
+            };
+        });
+
+        charts.history = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: history.map(h => h.exam),
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const tbody = document.getElementById('historyDetailBody');
+        tbody.innerHTML = '';
+        history.forEach(record => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${record.exam}</td>
+                <td><strong>${record.totalScore.toFixed(0)}</strong></td>
+                <td>${record.chinese.toFixed(0)}</td>
+                <td>${record.math.toFixed(0)}</td>
+                <td>${record.english.toFixed(0)}</td>
+                <td>${record.physics.toFixed(0)}</td>
+                <td>${record.chemistry.toFixed(0)}</td>
+                <td>${record.biology.toFixed(0)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderClassComparison() {
+        const sourceData = currentUser.role === 'test' ? sandboxData : classesData;
+        const classes = Object.keys(sourceData);
+        const classStats = classes.map(className => {
+            const classData = sourceData[className];
+            const avg = classData.reduce((sum, s) => sum + s.totalScore, 0) / classData.length;
+            const max = Math.max(...classData.map(s => s.totalScore));
+            const min = Math.min(...classData.map(s => s.totalScore));
+            const passed = classData.filter(s => s.totalScore >= 450).length;
+            const passRate = (passed / classData.length) * 100;
+            
+            return { className, avg, max, min, passRate };
+        });
+
+        if (charts.classCompare) charts.classCompare.destroy();
+        const ctx1 = document.getElementById('classCompareChart').getContext('2d');
+        charts.classCompare = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: classStats.map(c => c.className),
+                datasets: [{
+                    label: '平均分',
+                    data: classStats.map(c => c.avg.toFixed(1)),
+                    backgroundColor: 'rgba(102, 126, 234, 0.6)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        if (charts.classPassRate) charts.classPassRate.destroy();
+        const ctx2 = document.getElementById('classPassRateChart').getContext('2d');
+        charts.classPassRate = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: classStats.map(c => c.className),
+                datasets: [{
+                    label: '及格率 (%)',
+                    data: classStats.map(c => c.passRate.toFixed(1)),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const tbody = document.getElementById('classStatsBody');
+        tbody.innerHTML = '';
+        classStats.forEach(stat => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${stat.className}</td>
+                <td>${stat.avg.toFixed(1)}</td>
+                <td>${stat.max}</td>
+                <td>${stat.min}</td>
+                <td>${stat.passRate.toFixed(1)}%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderPredictionSelector() {
+        const select = document.getElementById('predictionStudentSelect');
+        select.innerHTML = '<option value="">请选择学生</option>';
+        studentsData.forEach(student => {
+            const option = document.createElement('option');
+            option.value = student.id;
+            option.textContent = student.name;
+            select.appendChild(option);
+        });
+    }
+
+    function showPrediction() {
+        const studentId = document.getElementById('predictionStudentSelect').value;
+        if (!studentId) return;
+
+        const history = generateHistoryData()[studentId];
+        const scores = history.map(h => h.totalScore);
+        
+        const trend = (scores[scores.length - 1] - scores[0]) / scores.length;
+        const predicted = scores[scores.length - 1] + trend;
+        
+        document.getElementById('predictedScore').textContent = predicted.toFixed(0);
+        document.getElementById('predictedTrend').textContent = trend > 0 ? '↑ 上升' : '↓ 下降';
+
+        if (charts.prediction) charts.prediction.destroy();
+        const ctx = document.getElementById('predictionChart').getContext('2d');
+        charts.prediction = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [...history.map(h => h.exam), '预测'],
+                datasets: [{
+                    label: '实际成绩',
+                    data: [...scores, null],
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    tension: 0.1
+                }, {
+                    label: '预测成绩',
+                    data: [null, null, null, scores[scores.length - 1], predicted],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderDash: [5, 5],
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        const student = studentsData.find(s => s.id === studentId);
+        let suggestions = '<ul>';
+        
+        Object.keys(SUBJECTS).forEach(subject => {
+            const maxScore = SUBJECTS[subject].maxScore;
+            if (student[subject] < maxScore * 0.7) {
+                suggestions += `<li>加强${SUBJECTS[subject].name}学习，当前分数偏低</li>`;
+            }
+        });
+        
+        if (trend < 0) {
+            suggestions += '<li>成绩呈下降趋势，需要调整学习方法</li>';
+        } else {
+            suggestions += '<li>成绩呈上升趋势，继续保持！</li>';
+        }
+        
+        suggestions += '</ul>';
+        document.getElementById('studySuggestions').innerHTML = suggestions;
+    }
+
+    function editStudent(studentId) {
+        if (currentUser.role !== 'admin' && currentUser.role !== 'test') {
+            alert('您没有编辑权限。');
+            return;
+        }
+        
+        const student = studentsData.find(s => s.id === studentId);
+        
+        document.getElementById('editStudentId').value = student.id;
+        document.getElementById('editName').value = student.name;
+        document.getElementById('editChinese').value = student.chinese;
+        document.getElementById('editMath').value = student.math;
+        document.getElementById('editEnglish').value = student.english;
+        document.getElementById('editPhysics').value = student.physics;
+        document.getElementById('editChemistry').value = student.chemistry;
+        document.getElementById('editBiology').value = student.biology;
+        
+        document.getElementById('editModal').style.display = 'block';
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+    }
+
+    document.getElementById('editForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (currentUser.role !== 'admin' && currentUser.role !== 'test') {
+            alert('您没有编辑权限。');
+            return;
+        }
+        
+        const studentId = document.getElementById('editStudentId').value;
+        const student = studentsData.find(s => s.id === studentId);
+        
+        student.chinese = parseFloat(document.getElementById('editChinese').value);
+        student.math = parseFloat(document.getElementById('editMath').value);
+        student.english = parseFloat(document.getElementById('editEnglish').value);
+        student.physics = parseFloat(document.getElementById('editPhysics').value);
+        student.chemistry = parseFloat(document.getElementById('editChemistry').value);
+        student.biology = parseFloat(document.getElementById('editBiology').value);
+        
+        student.totalScore = student.chinese + student.math + student.english + 
+                           student.physics + student.chemistry + student.biology;
+        
+        const dataSource = currentUser.role === 'test' ? sandboxData : classesData;
+        dataSource[currentClass] = [...studentsData].sort((a, b) => b.totalScore - a.totalScore);
+        
+        closeEditModal();
+        renderCurrentTab();
+        alert('成绩已更新！');
+    });
+
+    function generateNewData() {
+        if (currentUser.role !== 'test') {
+            alert('只有体验账号可以在沙盒环境中刷新数据。');
+            return;
+        }
+        if (confirm('确定要重新生成沙盒数据吗？')) {
+            const classes = Object.keys(sandboxData);
+            classes.forEach(className => {
+                sandboxData[className] = generateStudentData(className);
+            });
+            studentsData = sandboxData[currentClass];
+            filteredData = [...studentsData];
+            renderCurrentTab();
+            alert('沙盒数据已刷新！');
+        }
+    }
+
+    function exportToExcel() {
+        if (currentUser.role !== 'admin' && currentUser.role !== 'test') {
+            alert('您没有导出权限。');
+            return;
+        }
+        
+        const wb = XLSX.utils.book_new();
+        const sourceData = currentUser.role === 'test' ? sandboxData : classesData;
+        
+        Object.keys(sourceData).forEach(className => {
+            const classStudents = sourceData[className];
+            const wsData = [
+                ['排名', '学号', '姓名', '语文', '数学', '英语', '物理', '化学', '生物', '总分']
+            ];
+            
+            classStudents.forEach((student, index) => {
+                wsData.push([
+                    index + 1,
+                    student.studentId,
+                    student.name,
+                    student.chinese,
+                    student.math,
+                    student.english,
+                    student.physics,
+                    student.chemistry,
+                    student.biology,
+                    student.totalScore
+                ]);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, className);
+        });
+        
+        XLSX.writeFile(wb, '成绩分析报表.xlsx');
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        const activeTabButton = document.querySelector(`.nav-tab[onclick="switchTab('${tabName}')"]`) || 
+                                document.getElementById(`${tabName}Tab`);
+        if(activeTabButton) activeTabButton.classList.add('active');
+        
+        const activeTabContent = document.getElementById(tabName);
+        if(activeTabContent) activeTabContent.classList.add('active');
+        
+        if (currentUser.role === 'preview') return;
+
+        renderCurrentTab();
+    }
+
+    window.addEventListener('load', () => {
+        initializeClassesData();
+        
+        const savedUser = sessionStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            initializeDashboard();
+        }
+        
+        const savedTheme = localStorage.getItem('dashboardTheme');
+        if (savedTheme) {
+            setTheme(savedTheme);
+        } else {
+            document.getElementById('theme-default').classList.add('active');
+        }
+    });
+
+    function initializeClassesData() {
+        for (let i = 1; i <= 6; i++) {
+            const className = `${i}班`;
+            classesData[className] = generateStudentData(className);
+        }
+        originalClassesData = JSON.parse(JSON.stringify(classesData));
+    }
+
+    window.onclick = function(event) {
+        const modal = document.getElementById('editModal');
+        if (event.target === modal) {
+            closeEditModal();
+        }
+    }
+    </script>
+</body>
+</html>
