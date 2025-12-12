@@ -298,9 +298,9 @@ trend = (最新成绩 - 首次成绩) / 考试次数
 
 ## 👨‍💻 作者
 
-**Your Name**
+**Ziyu-git**
 - GitHub: [@Ziyu-git](https://github.com/Ziyu-git)
-- Email: ziyu-github@outlook.sg
+- Email: ziyu-github@tutamail.com
 
 ## 🙏 致谢
 
@@ -313,7 +313,7 @@ trend = (最新成绩 - 首次成绩) / 考试次数
 如有问题或建议，欢迎通过以下方式联系：
 
 - 💬 [提交 Issue](https://github.com/yourusername/grade-dashboard/issues)
-- 📧 Email: ziyu-github@outlook.sg
+- 📧 Email: ziyu-github@tutamail.com
 
 ---
 
